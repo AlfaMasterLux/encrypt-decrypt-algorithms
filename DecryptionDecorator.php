@@ -2,6 +2,8 @@
 
 namespace app\components;
 
+use app\components\ContentHelper;
+
 /**
  * Class DecryptionDecorator
  * @package app\components
@@ -20,10 +22,7 @@ class DecryptionDecorator extends Decorator
 
     private function decryptFile(): bool
     {
-        $handle = fopen($this->resourceEncrypted, 'r');
-        $file = fread($handle, filesize($this->resourceEncrypted));
-        fclose($handle);
-
+        $file = ContentHelper::home($this->resourceEncrypted);
         $this->mac = substr($file, -10);
         $this->enc = explode($this->mac, $file)[0];
         $test = substr(hash_hmac($this->algorithm, $this->cryptoArray['iv'] . $this->enc, $this->cryptoArray['macKey'], true), 0, 10);

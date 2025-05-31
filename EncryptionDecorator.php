@@ -22,11 +22,7 @@ class EncryptionDecorator extends Decorator
     private function encryptFile(): bool
     {
         $this->resourceEncrypted = $this->fileType . self::ENC_EXTENSION;
-
-        $handler = fopen($this->resource, 'r');
-        $content = fread($handler, filesize($this->resource));
-        fclose($handler);
-
+        $content = ContentHelper::home($this->resource);
         $this->enc = openssl_encrypt($content, 'aes-256-cbc', $this->cryptoArray['cipherKey'], OPENSSL_RAW_DATA, $this->cryptoArray['iv']);
         $this->mac = substr(hash_hmac($this->algorithm, $this->cryptoArray['iv'] . $this->enc, $this->cryptoArray['macKey'], true), 0, 10);
 

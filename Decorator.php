@@ -21,7 +21,7 @@ abstract class Decorator implements StreamInterface
     const ORIG_EXTENSION    = '.original';
     const SDC_EXTENSION     = '.sidecar';
 
-    /** @var StreamInterface[] Streams being decorated */
+    /** @var StreamInterface[] */
     protected array $streams = [];
 
     /** @var bool */
@@ -81,7 +81,7 @@ abstract class Decorator implements StreamInterface
         $handler = fopen($this->resourceKey, 'w+');
 
         try {
-            $this->mediaKey   = random_bytes(32);
+            $this->mediaKey = random_bytes(32);
         } catch (Exception $exception) {
             echo $exception;
         }
@@ -94,8 +94,8 @@ abstract class Decorator implements StreamInterface
 
     protected function readMediaKeyFile(): string
     {
-        $handler          = fopen($this->resourceKey, 'r');
-        $this->mediaKey   = fread($handler, filesize($this->resourceKey));
+        $handler = fopen($this->resourceKey, 'r');
+        $this->mediaKey = fread($handler, filesize($this->resourceKey));
         fclose($handler);
 
         return $this->mediaKey;
@@ -103,13 +103,13 @@ abstract class Decorator implements StreamInterface
 
     protected function getCryptoArrayValues(): array
     {
-        $mediaKeyExpanded   = hash_hkdf($this->algorithm, $this->mediaKey, self::HKDF_LENGTH, self::getInfoHKDF());
-        $result             = str_split($mediaKeyExpanded, '16');
+        $mediaKeyExpanded = hash_hkdf($this->algorithm, $this->mediaKey, self::HKDF_LENGTH, self::getInfoHKDF());
+        $result = str_split($mediaKeyExpanded, '16');
 
         return [
-            'iv'        => $result[0],
+            'iv' => $result[0],
             'cipherKey' => $result[1] . $result[2],
-            'macKey'    => $result[3]
+            'macKey' => $result[3]
         ];
     }
 
@@ -127,10 +127,6 @@ abstract class Decorator implements StreamInterface
         }
     }
 
-
-    /**
-     * Closes each attached stream.
-     */
     public function close(): void
     {
         $this->pos = $this->current = 0;
@@ -143,11 +139,6 @@ abstract class Decorator implements StreamInterface
         $this->streams = [];
     }
 
-    /**
-     * Detaches each attached stream.
-     *
-     * Returns null as it's not clear which underlying stream resource to return.
-     */
     public function detach()
     {
         $this->pos = $this->current = 0;
@@ -190,12 +181,6 @@ abstract class Decorator implements StreamInterface
         return strval($this);
     }
 
-    /**
-     * Tries to calculate the size by adding the size of each stream.
-     *
-     * If any of the streams do not return a valid number, then the size of the
-     * append stream cannot be determined and null is returned.
-     */
     public function getSize(): ?int
     {
         $size = 0;
@@ -238,9 +223,6 @@ abstract class Decorator implements StreamInterface
         return $this->seekable;
     }
 
-    /**
-     * Attempts to seek to the given position. Only supports SEEK_SET.
-     */
     public function seek($offset, $whence = SEEK_SET): void
     {
         if (!$this->seekable) {
@@ -250,8 +232,6 @@ abstract class Decorator implements StreamInterface
         }
 
         $this->pos = $this->current = 0;
-
-        // Rewind each stream
         foreach ($this->streams as $i => $stream) {
             try {
                 $stream->rewind();
@@ -261,7 +241,6 @@ abstract class Decorator implements StreamInterface
             }
         }
 
-        // Seek to the actual position by reading from each stream
         while ($this->pos < $offset && !$this->eof()) {
             $result = $this->read(min(8096, $offset - $this->pos));
             if ($result === '') {
@@ -270,9 +249,6 @@ abstract class Decorator implements StreamInterface
         }
     }
 
-    /**
-     * Reads from all of the appended streams until the length is met or EOF.
-     */
     public function read($length): string
     {
         $buffer = '';
@@ -281,8 +257,6 @@ abstract class Decorator implements StreamInterface
         $progressToNext = false;
 
         while ($remaining > 0) {
-
-            // Progress to the next stream if needed.
             if ($progressToNext || $this->streams[$this->current]->eof()) {
                 $progressToNext = false;
                 if ($this->current === $total) {
@@ -316,5 +290,4 @@ abstract class Decorator implements StreamInterface
     {
         return $key ? null : [];
     }
-
 }

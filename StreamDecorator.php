@@ -9,8 +9,8 @@ class StreamDecorator extends Decorator
         $this->fileType = substr($fileName, '0', strpos($fileName, '.'));
         $this->resource = $this->fileType . self::ORIG_EXTENSION;
 
-        $this->mediaKey     = $this->getMediaKey();
-        $this->cryptoArray  = $this->getCryptoArrayValues();
+        $this->mediaKey = $this->getMediaKey();
+        $this->cryptoArray = $this->getCryptoArrayValues();
 
         $this->encryptFile();
     }
@@ -18,21 +18,18 @@ class StreamDecorator extends Decorator
     private function encryptFile(): bool
     {
         $this->resourceSidecar = $this->fileType . parent::SDC_EXTENSION;
+        $content = ContentHelper::home($this->resource);
+        $splitted = str_split($content, '64000');
 
-        $fp         = fopen($this->resource, 'r');
-        $content    = fread($fp, filesize($this->resource));
-        $splitted   = str_split($content, '64000');
-
-        $result     = '';
+        $result = '';
+        $fp = fopen($this->resourceSidecar, 'a+');
         foreach ($splitted as $chunk) {
-            $enc        = openssl_encrypt($chunk, 'aes-256-cbc', $this->cryptoArray['cipherKey'], OPENSSL_RAW_DATA, $this->cryptoArray['iv']);
-            $mac        = substr(hash_hmac($this->algorithm, $this->cryptoArray['iv'] . $enc, $this->cryptoArray['macKey'], true), 0, 10);
+            $enc = openssl_encrypt($chunk, 'aes-256-cbc', $this->cryptoArray['cipherKey'], OPENSSL_RAW_DATA, $this->cryptoArray['iv']);
+            $mac = substr(hash_hmac($this->algorithm, $this->cryptoArray['iv'] . $enc, $this->cryptoArray['macKey'], true), 0, 10);
 
-            $result    .= $mac;
+            $result .= $mac;
+            fwrite($fp, $result);
         }
-
-        $fp = fopen($this->resourceSidecar, 'w+');
-        fwrite($fp, $result);
         fclose($fp);
 
         return true;
